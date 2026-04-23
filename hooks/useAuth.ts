@@ -54,15 +54,16 @@ export function useAuth() {
   }
 
   async function signUp(email: string, password: string, name: string) {
-    const { data, error } = await supabase.auth.signUp({ email, password });
+    const { data, error } = await supabase.auth.signUp({ email, password, options: { data: { name } } });
     if (error || !data.user) return { error };
-    const { error: profileError } = await supabase.from('profiles').insert({
+    // Upsert profile in case trigger didn't fire (e.g. email confirmation required)
+    await supabase.from('profiles').upsert({
       id: data.user.id,
       name,
       role: 'rep',
       avatar_color: AVATAR_COLORS[Math.floor(Math.random() * AVATAR_COLORS.length)],
-    });
-    return { error: profileError };
+    }, { onConflict: 'id' });
+    return { error: null };
   }
 
   async function signOut() {

@@ -1,11 +1,12 @@
 import { useEffect } from 'react';
-import { View, Text, ActivityIndicator, StyleSheet } from 'react-native';
+import { View, Text, ActivityIndicator, StyleSheet, Platform } from 'react-native';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useAuth } from '../hooks/useAuth';
 import { Colors, Typography } from '../constants/theme';
+import MobileFrame from '../components/MobileFrame';
 
-export default function RootLayout() {
+function AppContent() {
   const { session, loading } = useAuth();
   const segments = useSegments();
   const router = useRouter();
@@ -26,7 +27,7 @@ export default function RootLayout() {
         </View>
         <Text style={styles.brand}>Leaf Cleaning</Text>
         <Text style={styles.tagline}>Sales Tracker</Text>
-        <ActivityIndicator color={Colors.green} style={{ marginTop: 40 }} />
+        <ActivityIndicator color={Colors.green} size="large" style={{ marginTop: 40 }} />
       </View>
     );
   }
@@ -38,9 +39,21 @@ export default function RootLayout() {
         <Stack.Screen name="(auth)" />
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="rep/[repId]" options={{ presentation: 'card' }} />
+        <Stack.Screen name="+html" options={{ headerShown: false }} />
       </Stack>
     </>
   );
+}
+
+export default function RootLayout() {
+  if (Platform.OS === 'web') {
+    return (
+      <MobileFrame>
+        <AppContent />
+      </MobileFrame>
+    );
+  }
+  return <AppContent />;
 }
 
 const styles = StyleSheet.create({
