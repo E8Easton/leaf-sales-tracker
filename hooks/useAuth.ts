@@ -34,13 +34,18 @@ export function useAuth() {
   }, []);
 
   async function fetchProfile(userId: string) {
-    const { data } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', userId)
-      .single();
-    setProfile(data);
-    setLoading(false);
+    try {
+      const { data } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+      setProfile(data);
+    } catch {
+      // profile table may not be set up yet
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function signIn(email: string, password: string) {
