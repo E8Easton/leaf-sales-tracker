@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import type { Session, User } from '@supabase/supabase-js';
+import type { Session } from '@supabase/supabase-js';
 
 export type Profile = {
   id: string;
@@ -42,7 +42,7 @@ export function useAuth() {
         .single();
       setProfile(data);
     } catch {
-      // profile table may not be set up yet
+      // profile not yet created
     } finally {
       setLoading(false);
     }
@@ -50,20 +50,42 @@ export function useAuth() {
 
   async function signIn(email: string, password: string) {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) {
+      // Give a clearer message for the most common failure
+      if (error.message.toLowerCase().includes('email not confirmed') ||
+          error.message.toLowerCase().includes('not confirmed')) {
+        return { error: { ...error, message: 'Please confirm your email first — check your inbox for a link from Supabase.' } };
+      }
+      if (error.message.toLowerCase().includes('invalid login')) {
+        return { error: { ...error, message: 'Incorrect email or password.' } };
+      }
+    }
     return { error };
   }
 
   async function signUp(email: string, password: string, name: string) {
-    const { data, error } = await supabase.auth.signUp({ email, password, options: { data: { name } } });
-    if (error || !data.user) return { error };
-    // Upsert profile in case trigger didn't fire (e.g. email confirmation required)
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { data: { name } },
+    });
+    if (error) return { error, needsConfirmation: false };
+    if (!data.user) return { error: new Error('Sign up failed — try again.') as any, needsConfirmation: false };
+
+    // If session is null, Supabase requires email confirmation before the user can log in
+    if (!data.session) {
+      return { error: null, needsConfirmation: true };
+    }
+
+    // Session returned immediately — email confirmation is off, create profile now
     await supabase.from('profiles').upsert({
       id: data.user.id,
       name,
       role: 'rep',
       avatar_color: AVATAR_COLORS[Math.floor(Math.random() * AVATAR_COLORS.length)],
     }, { onConflict: 'id' });
-    return { error: null };
+
+    return { error: null, needsConfirmation: false };
   }
 
   async function signOut() {
@@ -73,4 +95,4 @@ export function useAuth() {
   return { session, profile, loading, signIn, signUp, signOut };
 }
 
-const AVATAR_COLORS = ['#C85A30', '#E8C435', '#6BAF6B', '#7BA4C8', '#9B6BB5'];
+const AVATAR_COLORS = ['#4BAEE6', '#7EC4F4', '#3A9AD4', '#1B7FC4', '#5BBEF5'];

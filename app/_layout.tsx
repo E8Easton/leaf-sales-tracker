@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { View, Text, ActivityIndicator, StyleSheet, Platform } from 'react-native';
+import { View, Text, ActivityIndicator, StyleSheet, Platform, Image } from 'react-native';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useAuth } from '../hooks/useAuth';
@@ -22,12 +22,10 @@ function AppContent() {
     return (
       <View style={styles.splash}>
         <StatusBar style="light" />
-        <View style={styles.logoCircle}>
-          <Text style={styles.logoLeaf}>🍃</Text>
-        </View>
+        <Image source={require('../assets/logo.png')} style={styles.logo} resizeMode="contain" />
         <Text style={styles.brand}>Leaf Cleaning</Text>
         <Text style={styles.tagline}>Sales Tracker</Text>
-        <ActivityIndicator color={Colors.green} size="large" style={{ marginTop: 40 }} />
+        <ActivityIndicator color={Colors.primary} size="large" style={{ marginTop: 40 }} />
       </View>
     );
   }
@@ -35,7 +33,7 @@ function AppContent() {
   return (
     <>
       <StatusBar style="light" />
-      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: '#1A1A1A' } }}>
+      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: Colors.background } }}>
         <Stack.Screen name="(auth)" />
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="rep/[repId]" options={{ presentation: 'card' }} />
@@ -63,16 +61,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  logoCircle: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: Colors.green,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 20,
-  },
-  logoLeaf: { fontSize: 48 },
+  logo: { width: 100, height: 100, marginBottom: 20 },
   brand: { ...Typography.hero, color: Colors.white, fontSize: 36 },
   tagline: { ...Typography.body, color: Colors.textMuted, marginTop: 8 },
 });

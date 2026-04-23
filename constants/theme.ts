@@ -1,23 +1,40 @@
+// Leaf Cleaning brand colors
 export const Colors = {
-  background: '#1A1A1A',
-  surface: '#262626',
-  surfaceElevated: '#2E2E2E',
-  coral: '#C85A30',
-  coralLight: '#D4694A',
+  // Backgrounds — deep navy matching brand
+  background: '#0C1828',
+  surface: '#1B2A4A',
+  surfaceElevated: '#243456',
+
+  // Brand primary — Leaf Cleaning blue
+  primary: '#4BAEE6',
+  primaryDark: '#3A9AD4',
+  primaryLight: '#7EC4F4',
+
+  // Mapped as 'green' for backward compat (components use Colors.green)
+  green: '#4BAEE6',
+  greenLight: '#7EC4F4',
+
+  // Accent / secondary
+  blue: '#4BAEE6',
+  blueLight: '#7EC4F4',
+
+  // Status
+  success: '#34a864',
+  danger: '#E53935',
   yellow: '#E8C435',
   yellowLight: '#F0D050',
-  green: '#6BAF6B',
-  greenLight: '#7DC87D',
-  blue: '#7BA4C8',
-  blueLight: '#8DB5D8',
+  coral: '#C85A30',
+  coralLight: '#D4694A',
+
+  // Text
+  white: '#FFFFFF',
   cream: '#EDE5CC',
   creamDark: '#D8CFB8',
-  white: '#FFFFFF',
-  textMuted: '#888888',
-  textFaint: '#555555',
-  border: '#2E2E2E',
-  success: '#4CAF50',
-  danger: '#E53935',
+  textMuted: '#8aaac8',
+  textFaint: '#3d5470',
+
+  // Borders
+  border: '#243456',
 };
 
 export const Spacing = {
