@@ -12,22 +12,21 @@ export type Profile = {
 export function useAuth() {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
+  // loading = only true during the very first session check on app start
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      if (session?.user) fetchProfile(session.user.id);
-      else setLoading(false);
+    // Initial session check — resolve loading as soon as we know auth state
+    supabase.auth.getSession().then(({ data: { session: s } }) => {
+      setSession(s);
+      setLoading(false); // done — navigate whether session exists or not
+      if (s?.user) fetchProfile(s.user.id);
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      if (session?.user) fetchProfile(session.user.id);
-      else {
-        setProfile(null);
-        setLoading(false);
-      }
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, s) => {
+      setSession(s);
+      if (s?.user) fetchProfile(s.user.id);
+      else setProfile(null);
     });
 
     return () => subscription.unsubscribe();
@@ -40,44 +39,42 @@ export function useAuth() {
         .select('*')
         .eq('id', userId)
         .single();
-      setProfile(data);
+      if (data) setProfile(data);
     } catch {
-      // profile not yet created
-    } finally {
-      setLoading(false);
+      // profiles table may not exist yet — non-fatal
     }
   }
 
-  async function signIn(email: string, password: string) {
+  async function signIn(email: string, password: string): Promise<{ error: any }> {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
-      // Give a clearer message for the most common failure
-      if (error.message.toLowerCase().includes('email not confirmed') ||
-          error.message.toLowerCase().includes('not confirmed')) {
-        return { error: { ...error, message: 'Please confirm your email first — check your inbox for a link from Supabase.' } };
+      const msg = error.message ?? '';
+      if (msg.toLowerCase().includes('not confirmed')) {
+        return { error: { message: 'Email not confirmed — go to Supabase → Authentication → Providers → Email and turn off "Confirm email".' } };
       }
-      if (error.message.toLowerCase().includes('invalid login')) {
-        return { error: { ...error, message: 'Incorrect email or password.' } };
+      if (msg.toLowerCase().includes('invalid login') || msg.toLowerCase().includes('invalid credentials')) {
+        return { error: { message: 'Incorrect email or password. Try again.' } };
       }
+      return { error };
     }
-    return { error };
+    return { error: null };
   }
 
-  async function signUp(email: string, password: string, name: string) {
+  async function signUp(email: string, password: string, name: string): Promise<{ error: any; needsConfirmation: boolean }> {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: { data: { name } },
     });
     if (error) return { error, needsConfirmation: false };
-    if (!data.user) return { error: new Error('Sign up failed — try again.') as any, needsConfirmation: false };
+    if (!data.user) return { error: { message: 'Sign up failed — try again.' }, needsConfirmation: false };
 
-    // If session is null, Supabase requires email confirmation before the user can log in
     if (!data.session) {
+      // Supabase still requires email confirmation
       return { error: null, needsConfirmation: true };
     }
 
-    // Session returned immediately — email confirmation is off, create profile now
+    // No confirmation needed — create profile row immediately
     await supabase.from('profiles').upsert({
       id: data.user.id,
       name,

@@ -3,6 +3,7 @@ import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
   KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator, Alert, Image,
 } from 'react-native';
+import { useRouter } from 'expo-router';
 import { Colors, Spacing, BorderRadius, Typography } from '../../constants/theme';
 import { useAuth } from '../../hooks/useAuth';
 
@@ -10,15 +11,16 @@ type Mode = 'login' | 'signup';
 
 export default function LoginScreen() {
   const { signIn, signUp } = useAuth();
+  const router = useRouter();
   const [mode, setMode] = useState<Mode>('login');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
-  const [confirmed, setConfirmed] = useState(false);
+  const [needsConfirmation, setNeedsConfirmation] = useState(false);
 
   async function handleSubmit() {
-    if (!email || !password || (mode === 'signup' && !name)) {
+    if (!email.trim() || !password || (mode === 'signup' && !name.trim())) {
       Alert.alert('Missing fields', 'Please fill in all fields.');
       return;
     }
@@ -27,20 +29,29 @@ export default function LoginScreen() {
     if (mode === 'login') {
       const { error } = await signIn(email.trim(), password);
       setBusy(false);
-      if (error) Alert.alert('Sign In Failed', error.message);
+      if (error) {
+        Alert.alert('Sign In Failed', error.message ?? 'Something went wrong. Check your email and password.');
+        return;
+      }
+      // Navigate directly — don't wait for useEffect in _layout
+      router.replace('/(tabs)');
     } else {
       const result = await signUp(email.trim(), password, name.trim());
       setBusy(false);
       if (result.error) {
-        Alert.alert('Sign Up Failed', result.error.message);
-      } else if (result.needsConfirmation) {
-        setConfirmed(true);
+        Alert.alert('Sign Up Failed', result.error.message ?? 'Something went wrong.');
+        return;
       }
+      if (result.needsConfirmation) {
+        setNeedsConfirmation(true);
+        return;
+      }
+      // Signed up and logged in immediately
+      router.replace('/(tabs)');
     }
   }
 
-  // Show "check your email" screen after signup when confirmation is required
-  if (confirmed) {
+  if (needsConfirmation) {
     return (
       <View style={styles.confirmWrap}>
         <Image source={require('../../assets/logo.png')} style={styles.confirmLogo} resizeMode="contain" />
@@ -48,13 +59,13 @@ export default function LoginScreen() {
         <Text style={styles.confirmBody}>
           We sent a confirmation link to{'\n'}
           <Text style={styles.confirmEmail}>{email}</Text>
-          {'\n\n'}Click the link in that email, then come back and sign in.
+          {'\n\n'}Click the link in that email, then come back here and sign in.
         </Text>
-        <TouchableOpacity style={styles.btn} onPress={() => { setConfirmed(false); setMode('login'); }}>
+        <TouchableOpacity style={styles.btn} onPress={() => { setNeedsConfirmation(false); setMode('login'); }}>
           <Text style={styles.btnText}>Back to Sign In</Text>
         </TouchableOpacity>
         <Text style={styles.confirmHint}>
-          No email? Ask your admin to disable email confirmation in Supabase → Authentication → Providers → Email.
+          Still not working? In Supabase → Authentication → Providers → Email → turn off "Confirm email".
         </Text>
       </View>
     );
@@ -64,14 +75,12 @@ export default function LoginScreen() {
     <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
 
-        {/* Logo */}
         <View style={styles.logoArea}>
           <Image source={require('../../assets/logo.png')} style={styles.logo} resizeMode="contain" />
           <Text style={styles.brand}>Leaf Cleaning</Text>
           <Text style={styles.tagline}>Sales Tracker</Text>
         </View>
 
-        {/* Card */}
         <View style={styles.card}>
           <Text style={styles.cardTitle}>
             {mode === 'login' ? 'Welcome back' : 'Create account'}
@@ -101,6 +110,7 @@ export default function LoginScreen() {
               onChangeText={setEmail}
               keyboardType="email-address"
               autoCapitalize="none"
+              autoCorrect={false}
             />
           </View>
 
@@ -116,17 +126,27 @@ export default function LoginScreen() {
             />
           </View>
 
-          <TouchableOpacity style={styles.btn} onPress={handleSubmit} disabled={busy} activeOpacity={0.85}>
+          <TouchableOpacity
+            style={[styles.btn, busy && styles.btnDisabled]}
+            onPress={handleSubmit}
+            disabled={busy}
+            activeOpacity={0.85}
+          >
             {busy
               ? <ActivityIndicator color="#fff" />
               : <Text style={styles.btnText}>{mode === 'login' ? 'Sign In' : 'Create Account'}</Text>
             }
           </TouchableOpacity>
 
-          <TouchableOpacity onPress={() => setMode(mode === 'login' ? 'signup' : 'login')} style={styles.switchBtn}>
+          <TouchableOpacity
+            onPress={() => setMode(mode === 'login' ? 'signup' : 'login')}
+            style={styles.switchBtn}
+          >
             <Text style={styles.switchText}>
-              {mode === 'login' ? "New rep? " : "Already have an account? "}
-              <Text style={styles.switchLink}>{mode === 'login' ? 'Sign up' : 'Sign in'}</Text>
+              {mode === 'login' ? 'New rep?  ' : 'Already have an account?  '}
+              <Text style={styles.switchLink}>
+                {mode === 'login' ? 'Sign up' : 'Sign in'}
+              </Text>
             </Text>
           </TouchableOpacity>
         </View>
@@ -178,6 +198,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: Spacing.sm,
   },
+  btnDisabled: { opacity: 0.6 },
   btnText: { ...Typography.bodyBold, color: Colors.white },
 
   switchBtn: { marginTop: Spacing.lg, alignItems: 'center' },

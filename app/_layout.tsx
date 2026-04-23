@@ -12,11 +12,18 @@ function AppContent() {
   const router = useRouter();
 
   useEffect(() => {
-    if (loading) return;
-    const inAuth = segments[0] === '(auth)';
-    if (!session && !inAuth) router.replace('/(auth)/login');
-    else if (session && inAuth) router.replace('/(tabs)');
-  }, [session, loading, segments]);
+    if (loading) return; // still checking initial session — wait
+
+    const inAuthGroup = segments[0] === '(auth)';
+
+    if (!session && !inAuthGroup) {
+      router.replace('/(auth)/login');
+    } else if (session && inAuthGroup) {
+      router.replace('/(tabs)');
+    }
+  }, [session, loading]);
+  // NOTE: intentionally not including `segments` so this only re-runs on
+  // actual auth changes, not every navigation event.
 
   if (loading) {
     return (
